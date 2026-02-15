@@ -489,6 +489,17 @@ body {
     }
 }
 
+@keyframes modalSlideOut {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(50px) scale(0.9);
+        opacity: 0;
+    }
+}
+
 .modal-icon {
     font-size: 4rem;
     margin-bottom: 20px;
