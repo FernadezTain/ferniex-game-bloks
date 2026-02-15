@@ -449,7 +449,8 @@ class BlockBlastGame {
         // Кнопки модального окна
         document.getElementById('restartBtn').addEventListener('click', () => this.restart());
         document.getElementById('rewardBtn').addEventListener('click', () => this.sendReward());
-        document.getElementById('modalBackdrop').addEventListener('click', () => this.hideGameOver());
+        // При клике на backdrop перезапускаем игру (не просто скрываем)
+        document.getElementById('modalBackdrop').addEventListener('click', () => this.restart());
     }
     
     showPreview(startRow, startCol, piece) {
@@ -560,12 +561,14 @@ class BlockBlastGame {
                 this.generateNewPieces();
             }
             
-            // Проверяем game over
-            if (!this.hasValidMoves()) {
-                setTimeout(() => this.gameOver(), 500);
-            }
-            
             this.updateStats();
+            
+            // Проверяем game over ПОСЛЕ анимации очистки (600мс)
+            setTimeout(() => {
+                if (!this.hasValidMoves()) {
+                    this.gameOver();
+                }
+            }, 600);
         }, 300);
     }
     
