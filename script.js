@@ -1,6 +1,7 @@
 // Константы
 const BOARD_SIZE = 8;
 const PIECE_COUNT = 3;
+const SECRET_KEY = 'block-blast-2025-secret';
 
 // Возможные фигуры (паттерны)
 const PIECE_SHAPES = [
@@ -296,7 +297,7 @@ class BlockBlastGame {
         wrapper.appendChild(grid);
         document.getElementById('piecesGrid').appendChild(wrapper);
         
-        // Только Drag and Drop
+        // Только Drag and Drop (убираем клик)
         this.setupDragAndDrop(wrapper, piece, index);
     }
     
@@ -513,6 +514,9 @@ class BlockBlastGame {
             return;
         }
         
+        // Подсчитываем количество блоков в фигуре
+        let blocksPlaced = 0;
+        
         // Размещаем фигуру на доске
         piece.shape.forEach((row, i) => {
             row.forEach((cell, j) => {
@@ -520,9 +524,14 @@ class BlockBlastGame {
                     const targetRow = startRow + i;
                     const targetCol = startCol + j;
                     this.board[targetRow][targetCol] = piece.color;
+                    blocksPlaced++;
                 }
             });
         });
+        
+        // Начисляем +10 очков за каждый установленный блок
+        this.score += blocksPlaced * 10;
+        this.updateScore();
         
         // Помечаем фигуру как использованную
         piece.used = true;
@@ -641,9 +650,13 @@ class BlockBlastGame {
                 this.renderBoard();
                 
                 // Начисляем очки
-                const basePoints = totalLines * 10;
-                const comboBonus = this.currentCombo > 1 ? (this.currentCombo - 1) * 20 : 0;
-                const points = basePoints + comboBonus;
+                // +30 очков за каждую линию
+                const linePoints = totalLines * 30;
+                
+                // +75 очков за каждое комбо (начиная со второго)
+                const comboBonus = this.currentCombo > 1 ? (this.currentCombo - 1) * 75 : 0;
+                
+                const points = linePoints + comboBonus;
                 
                 this.score += points;
                 this.clearedLines += totalLines;
@@ -733,7 +746,61 @@ class BlockBlastGame {
         this.updateStats();
     }
     
-    // НОВЫЙ МЕТОД БЕЗ ШИФРОВАНИЯ
+    // Добавляем метод lightenColor, который используется в createPieceElement
+    lightenColor(color, percent) {
+        const num = parseInt(color.replace("#",""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 + (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255)).toString(16).slice(1);
+    }
+    
+    // Методы для работы с рекордами
+    loadHighScore() {
+        const saved = localStorage.getItem('blockBlastHighScore');
+        return saved ? parseInt(saved) : 0;
+    }
+    
+    saveHighScore() {
+        localStorage.setItem('blockBlastHighScore', this.highScore.toString());
+    }
+    
+    // Шифрование для бота
+    encryptScore(score) {
+        // Используем короткие ключи для уменьшения размера
+        const data = {
+            s: score,                    // score
+            l: this.clearedLines,        // lines
+            c: this.maxCombo,            // combo
+            p: this.piecesPlaced,        // pieces
+            t: Date.now(),               // timestamp
+            h: this.generateChecksum(score) // hash/checksum
+        };
+        
+        const jsonString = JSON.stringify(data);
+        let encrypted = '';
+        
+        // XOR шифрование
+        for (let i = 0; i < jsonString.length; i++) {
+            const charCode = jsonString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length);
+            // Конвертируем в hex (2 символа на байт)
+            encrypted += charCode.toString(16).padStart(2, '0');
+        }
+        
+        return encrypted;
+    }
+    
+    generateChecksum(score) {
+        const str = `${score}${this.clearedLines}${this.maxCombo}${SECRET_KEY}`;
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(16);
+    }
+    
     sendReward() {
         const urlParams = new URLSearchParams(window.location.search);
         const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
@@ -769,30 +836,9 @@ class BlockBlastGame {
         
         console.log('=== REWARD SENT ===');
     }
-    
-    saveHighScore() {
-        localStorage.setItem('blockBlastHighScore', this.highScore.toString());
-    }
-    
-    loadHighScore() {
-        return parseInt(localStorage.getItem('blockBlastHighScore') || '0');
-    }
-    
-    lightenColor(color, percent) {
-        const num = parseInt(color.replace("#",""), 16);
-        const amt = Math.round(2.55 * percent);
-        const R = (num >> 16) + amt;
-        const G = (num >> 8 & 0x00FF) + amt;
-        const B = (num & 0x0000FF) + amt;
-        return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
-            (G<255?G<1?0:G:255)*0x100 +
-            (B<255?B<1?0:B:255))
-            .toString(16).slice(1);
-    }
 }
 
-// Инициализация игры
-let game;
+// Инициализация игры при загрузке страницы
 window.addEventListener('DOMContentLoaded', () => {
-    game = new BlockBlastGame();
+    new BlockBlastGame();
 });
