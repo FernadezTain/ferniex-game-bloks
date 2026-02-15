@@ -771,12 +771,36 @@ class BlockBlastGame {
         const urlParams = new URLSearchParams(window.location.search);
         const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
         
-        // Используем префикс BlockBlast_ для идентификации
-        const botUrl = `https://t.me/${botUsername}?start=BlockBlast_${encryptedData}`;
+        const startParam = `BlockBlast_${encryptedData}`;
         
-        window.open(botUrl, '_blank');
+        console.log('=== SENDING REWARD ===');
+        console.log('Bot username:', botUsername);
+        console.log('Param length:', startParam.length);
         console.log('Encrypted data:', encryptedData);
+        
+        // Telegram обрезает параметр start до 64 символов!
+        if (startParam.length > 64) {
+            console.error('ERROR: Parameter too long!', startParam.length);
+            alert('⚠️ Ошибка: данные слишком длинные.\nПопробуйте сыграть игру с меньшим счётом или обратитесь в поддержку.');
+            return;
+        }
+        
+        // Формируем обычную ссылку на бота
+        const botUrl = `https://t.me/${botUsername}?start=${startParam}`;
+        
         console.log('Bot URL:', botUrl);
+        console.log('Opening bot...');
+        
+        // Открываем бота в новой вкладке
+        const opened = window.open(botUrl, '_blank');
+        
+        if (!opened) {
+            // Если браузер заблокировал всплывающее окно
+            console.warn('Popup blocked, trying location.href');
+            window.location.href = botUrl;
+        }
+        
+        console.log('=== REWARD SENT ===');
     }
     
     saveHighScore() {
