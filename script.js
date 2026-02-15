@@ -770,10 +770,13 @@ class BlockBlastGame {
         const encryptedData = this.encryptScore(this.score);
         const urlParams = new URLSearchParams(window.location.search);
         const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
-        const botUrl = `https://t.me/${botUsername}?start=${encryptedData}`;
+        
+        // Используем префикс BlockBlast_ для идентификации
+        const botUrl = `https://t.me/${botUsername}?start=BlockBlast_${encryptedData}`;
         
         window.open(botUrl, '_blank');
         console.log('Encrypted data:', encryptedData);
+        console.log('Bot URL:', botUrl);
     }
     
     saveHighScore() {
@@ -845,5 +848,4 @@ window.addEventListener('DOMContentLoaded', () => {
 // Экспорт для бота
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { decryptScore, SECRET_KEY };
-
 }
