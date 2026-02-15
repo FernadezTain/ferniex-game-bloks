@@ -834,6 +834,18 @@ class BlockBlastGame {
         }
         
         console.log('=== REWARD SENT ===');
+        
+        // Анимация закрытия модального окна и перезапуск игры
+        const modal = document.getElementById('gameOverModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        // Добавляем класс для анимации выхода
+        modalContent.style.animation = 'modalSlideOut 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+        
+        // Через 400мс скрываем модальное окно и перезапускаем игру
+        setTimeout(() => {
+            this.restart();
+        }, 400);
     }
 }
 
