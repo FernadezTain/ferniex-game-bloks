@@ -769,7 +769,7 @@ class BlockBlastGame {
     sendReward() {
         const encryptedData = this.encryptScore(this.score);
         const urlParams = new URLSearchParams(window.location.search);
-        const botUsername = urlParams.get('bot') || 'your_bot_username';
+        const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
         const botUrl = `https://t.me/${botUsername}?start=${encryptedData}`;
         
         window.open(botUrl, '_blank');
@@ -845,4 +845,5 @@ window.addEventListener('DOMContentLoaded', () => {
 // Экспорт для бота
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { decryptScore, SECRET_KEY };
+
 }
