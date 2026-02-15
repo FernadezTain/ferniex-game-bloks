@@ -736,24 +736,27 @@ class BlockBlastGame {
     
     // Шифрование для бота
     encryptScore(score) {
+        // Используем короткие ключи для уменьшения размера
         const data = {
-            score: score,
-            lines: this.clearedLines,
-            combo: this.maxCombo,
-            pieces: this.piecesPlaced,
-            timestamp: Date.now(),
-            checksum: this.generateChecksum(score)
+            s: score,                    // score
+            l: this.clearedLines,        // lines
+            c: this.maxCombo,            // combo
+            p: this.piecesPlaced,        // pieces
+            t: Date.now(),               // timestamp
+            h: this.generateChecksum(score) // hash/checksum
         };
         
         const jsonString = JSON.stringify(data);
         let encrypted = '';
         
+        // XOR шифрование
         for (let i = 0; i < jsonString.length; i++) {
             const charCode = jsonString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length);
-            encrypted += String.fromCharCode(charCode);
+            // Конвертируем в hex (2 символа на байт)
+            encrypted += charCode.toString(16).padStart(2, '0');
         }
         
-        return btoa(encrypted);
+        return encrypted;
     }
     
     generateChecksum(score) {
