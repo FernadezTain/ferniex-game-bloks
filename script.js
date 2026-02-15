@@ -1,7 +1,6 @@
 // Константы
 const BOARD_SIZE = 8;
 const PIECE_COUNT = 3;
-const SECRET_KEY = 'block-blast-2025-secret';
 
 // Возможные фигуры (паттерны)
 const PIECE_SHAPES = [
@@ -297,7 +296,7 @@ class BlockBlastGame {
         wrapper.appendChild(grid);
         document.getElementById('piecesGrid').appendChild(wrapper);
         
-        // Только Drag and Drop (убираем клик)
+        // Только Drag and Drop
         this.setupDragAndDrop(wrapper, piece, index);
     }
     
@@ -734,72 +733,66 @@ class BlockBlastGame {
         this.updateStats();
     }
     
-    // Шифрование для бота
-    encryptScore(score) {
-        // Используем короткие ключи для уменьшения размера
-        const data = {
-            s: score,                    // score
-            l: this.clearedLines,        // lines
-            c: this.maxCombo,            // combo
-            p: this.piecesPlaced,        // pieces
-            t: Date.now(),               // timestamp
-            h: this.generateChecksum(score) // hash/checksum
-        };
-        
-        const jsonString = JSON.stringify(data);
-        let encrypted = '';
-        
-        // XOR шифрование
-        for (let i = 0; i < jsonString.length; i++) {
-            const charCode = jsonString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length);
-            // Конвертируем в hex (2 символа на байт)
-            encrypted += charCode.toString(16).padStart(2, '0');
-        }
-        
-        return encrypted;
-    }
-    
-    generateChecksum(score) {
-        const str = `${score}${this.clearedLines}${this.maxCombo}${SECRET_KEY}`;
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash = hash & hash;
-        }
-        return Math.abs(hash).toString(16);
-    }
+    // НОВЫЙ МЕТОД БЕЗ ШИФРОВАНИЯ
     sendReward() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
-    
-    // Формируем данные в формате: BB_score_lines_combo_pieces
-    const startParam = `BB_${this.score}_${this.clearedLines}_${this.maxCombo}_${this.piecesPlaced}`;
-    
-    console.log('=== SENDING REWARD ===');
-    console.log('Bot username:', botUsername);
-    console.log('Start param:', startParam);
-    console.log('Param length:', startParam.length);
-    
-    // Проверяем длину (должна быть < 64)
-    if (startParam.length > 64) {
-        console.error('ERROR: Parameter too long!', startParam.length);
-        alert('⚠️ Слишком высокий счёт для отправки.\nСыграйте с меньшим результатом.');
-        return;
+        const urlParams = new URLSearchParams(window.location.search);
+        const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
+        
+        // Формируем данные в формате: BB_score_lines_combo_pieces
+        const startParam = `BB_${this.score}_${this.clearedLines}_${this.maxCombo}_${this.piecesPlaced}`;
+        
+        console.log('=== SENDING REWARD ===');
+        console.log('Bot username:', botUsername);
+        console.log('Start param:', startParam);
+        console.log('Param length:', startParam.length);
+        
+        // Проверяем длину (должна быть < 64)
+        if (startParam.length > 64) {
+            console.error('ERROR: Parameter too long!', startParam.length);
+            alert('⚠️ Слишком высокий счёт для отправки.\nСыграйте с меньшим результатом.');
+            return;
+        }
+        
+        // Формируем ссылку на бота
+        const botUrl = `https://t.me/${botUsername}?start=${startParam}`;
+        
+        console.log('Bot URL:', botUrl);
+        console.log('Opening bot...');
+        
+        // Открываем бота
+        const opened = window.open(botUrl, '_blank');
+        
+        if (!opened) {
+            console.warn('Popup blocked, trying location.href');
+            window.location.href = botUrl;
+        }
+        
+        console.log('=== REWARD SENT ===');
     }
     
-    // Формируем ссылку на бота
-    const botUrl = `https://t.me/${botUsername}?start=${startParam}`;
-    
-    console.log('Bot URL:', botUrl);
-    console.log('Opening bot...');
-    
-    // Открываем бота
-    const opened = window.open(botUrl, '_blank');
-    
-    if (!opened) {
-        console.warn('Popup blocked, trying location.href');
-        window.location.href = botUrl;
+    saveHighScore() {
+        localStorage.setItem('blockBlastHighScore', this.highScore.toString());
     }
     
-    console.log('=== REWARD SENT ===');
+    loadHighScore() {
+        return parseInt(localStorage.getItem('blockBlastHighScore') || '0');
+    }
+    
+    lightenColor(color, percent) {
+        const num = parseInt(color.replace("#",""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
+            (G<255?G<1?0:G:255)*0x100 +
+            (B<255?B<1?0:B:255))
+            .toString(16).slice(1);
+    }
 }
+
+// Инициализация игры
+let game;
+window.addEventListener('DOMContentLoaded', () => {
+    game = new BlockBlastGame();
+});
