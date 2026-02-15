@@ -514,9 +514,6 @@ class BlockBlastGame {
             return;
         }
         
-        // Подсчитываем количество блоков в фигуре
-        let blocksPlaced = 0;
-        
         // Размещаем фигуру на доске
         piece.shape.forEach((row, i) => {
             row.forEach((cell, j) => {
@@ -524,13 +521,12 @@ class BlockBlastGame {
                     const targetRow = startRow + i;
                     const targetCol = startCol + j;
                     this.board[targetRow][targetCol] = piece.color;
-                    blocksPlaced++;
                 }
             });
         });
         
-        // Начисляем +10 очков за каждый установленный блок
-        this.score += blocksPlaced * 10;
+        // Начисляем +10 очков за размещение фигуры
+        this.score += 10;
         this.updateScore();
         
         // Помечаем фигуру как использованную
