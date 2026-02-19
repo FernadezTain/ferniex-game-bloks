@@ -740,7 +740,7 @@ class BlockBlastGame {
     
     sendReward() {
         const urlParams = new URLSearchParams(window.location.search);
-        const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
+        const botUsername = urlParams.get('bot') || 'FernieXBot';
         
         const startParam = `BB_${this.score}_${this.clearedLines}_${this.maxCombo}_${this.piecesPlaced}`;
         
@@ -778,4 +778,5 @@ class BlockBlastGame {
 window.addEventListener('DOMContentLoaded', () => {
     new BlockBlastGame();
 });
+
 
