@@ -3,7 +3,7 @@ const BOARD_SIZE = 8;
 const PIECE_COUNT = 3;
 const SECRET_KEY = 'block-blast-2025-secret';
 // Смещение вверх на тач-устройствах (px) — фигура и подсветка выше пальца
-const TOUCH_OFFSET_Y = 80;
+const TOUCH_OFFSET_Y = 100;
 
 // Возможные фигуры (паттерны)
 const PIECE_SHAPES = [
@@ -778,3 +778,4 @@ class BlockBlastGame {
 window.addEventListener('DOMContentLoaded', () => {
     new BlockBlastGame();
 });
+
