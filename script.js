@@ -2,6 +2,8 @@
 const BOARD_SIZE = 8;
 const PIECE_COUNT = 3;
 const SECRET_KEY = 'block-blast-2025-secret';
+// Смещение вверх на тач-устройствах (px) — фигура и подсветка выше пальца
+const TOUCH_OFFSET_Y = 80;
 
 // Возможные фигуры (паттерны)
 const PIECE_SHAPES = [
@@ -113,14 +115,12 @@ class BlockBlastGame {
         piecesGrid.innerHTML = '';
         this.pieces = [];
         
-        // Анализируем доску для умной генерации
         const boardAnalysis = this.analyzeBoardSpace();
         const suitableShapes = this.getSuitableShapes(boardAnalysis);
         
         for (let i = 0; i < PIECE_COUNT; i++) {
             let shape;
             
-            // 70% шанс дать подходящую фигуру, 30% - любую
             if (Math.random() < 0.7 && suitableShapes.length > 0) {
                 shape = suitableShapes[Math.floor(Math.random() * suitableShapes.length)];
             } else {
@@ -131,7 +131,7 @@ class BlockBlastGame {
             
             const piece = {
                 id: i,
-                shape: JSON.parse(JSON.stringify(shape)), // Глубокое копирование
+                shape: JSON.parse(JSON.stringify(shape)),
                 color: color,
                 used: false
             };
@@ -152,7 +152,6 @@ class BlockBlastGame {
             hasLargeSpaces: false
         };
         
-        // Находим все пустые области
         for (let row = 0; row < BOARD_SIZE; row++) {
             let horizontalGap = 0;
             for (let col = 0; col < BOARD_SIZE; col++) {
@@ -171,7 +170,6 @@ class BlockBlastGame {
             }
         }
         
-        // Проверяем вертикальные промежутки
         for (let col = 0; col < BOARD_SIZE; col++) {
             let verticalGap = 0;
             for (let row = 0; row < BOARD_SIZE; row++) {
@@ -189,16 +187,13 @@ class BlockBlastGame {
             }
         }
         
-        // Проверяем квадратные области
         for (let size = 5; size >= 2; size--) {
             for (let row = 0; row <= BOARD_SIZE - size; row++) {
                 for (let col = 0; col <= BOARD_SIZE - size; col++) {
                     let isEmpty = true;
                     for (let r = row; r < row + size && isEmpty; r++) {
                         for (let c = col; c < col + size && isEmpty; c++) {
-                            if (this.board[r][c] !== 0) {
-                                isEmpty = false;
-                            }
+                            if (this.board[r][c] !== 0) isEmpty = false;
                         }
                     }
                     if (isEmpty) {
@@ -208,7 +203,6 @@ class BlockBlastGame {
             }
         }
         
-        // Определяем типы доступных пространств
         analysis.hasSmallSpaces = analysis.largestHorizontalGap >= 1 || analysis.largestVerticalGap >= 1;
         analysis.hasMediumSpaces = analysis.largestHorizontalGap >= 3 || analysis.largestVerticalGap >= 3;
         analysis.hasLargeSpaces = analysis.largestSquareGap >= 3 || analysis.largestHorizontalGap >= 5;
@@ -219,39 +213,17 @@ class BlockBlastGame {
     getSuitableShapes(analysis) {
         const suitable = [];
         
-        PIECE_SHAPES.forEach((shape, index) => {
+        PIECE_SHAPES.forEach((shape) => {
             const height = shape.length;
             const width = shape[0].length;
-            
-            // Проверяем, подходит ли фигура под текущее состояние доски
             let fits = false;
             
-            // Маленькие фигуры (1-2 блока)
-            if (height <= 2 && width <= 2 && analysis.hasSmallSpaces) {
-                fits = true;
-            }
+            if (height <= 2 && width <= 2 && analysis.hasSmallSpaces) fits = true;
+            if ((height <= 3 && width <= 3) && analysis.hasMediumSpaces) fits = true;
+            if (height === 1 && width <= analysis.largestHorizontalGap) fits = true;
+            if (width === 1 && height <= analysis.largestVerticalGap) fits = true;
+            if (height === width && height <= analysis.largestSquareGap) fits = true;
             
-            // Средние фигуры (3 блока)
-            if ((height <= 3 && width <= 3) && analysis.hasMediumSpaces) {
-                fits = true;
-            }
-            
-            // Горизонтальные линии
-            if (height === 1 && width <= analysis.largestHorizontalGap) {
-                fits = true;
-            }
-            
-            // Вертикальные линии
-            if (width === 1 && height <= analysis.largestVerticalGap) {
-                fits = true;
-            }
-            
-            // Квадраты
-            if (height === width && height <= analysis.largestSquareGap) {
-                fits = true;
-            }
-            
-            // Проверяем, может ли фигура поместиться хотя бы в одном месте
             if (fits || this.canShapeFitAnywhere(shape)) {
                 suitable.push(shape);
             }
@@ -264,9 +236,7 @@ class BlockBlastGame {
         const testPiece = { shape, color: '#000000', used: false };
         for (let row = 0; row < BOARD_SIZE; row++) {
             for (let col = 0; col < BOARD_SIZE; col++) {
-                if (this.canPlacePiece(row, col, testPiece)) {
-                    return true;
-                }
+                if (this.canPlacePiece(row, col, testPiece)) return true;
             }
         }
         return false;
@@ -297,7 +267,6 @@ class BlockBlastGame {
         wrapper.appendChild(grid);
         document.getElementById('piecesGrid').appendChild(wrapper);
         
-        // Только Drag and Drop (убираем клик)
         this.setupDragAndDrop(wrapper, piece, index);
     }
     
@@ -316,7 +285,6 @@ class BlockBlastGame {
             ghostPiece.style.transform = 'scale(1.1)';
             ghostPiece.style.transition = 'none';
             document.body.appendChild(ghostPiece);
-            
             updateGhostPosition(e);
         };
         
@@ -328,12 +296,11 @@ class BlockBlastGame {
             
             if (clientX !== undefined && clientY !== undefined) {
                 const isTouchEvent = !!(e.touches || e.changedTouches);
-                // На тач-устройствах поднимаем фигуру выше пальца,
-                // чтобы она была видна и не перекрывалась пальцем
+                // На тач поднимаем выше пальца, на мышке — по центру
                 const offsetY = isTouchEvent
-                    ? ghostPiece.offsetHeight + 20  // полностью выше пальца + отступ
-                    : ghostPiece.offsetHeight / 2;  // обычное центрирование для мыши
-
+                    ? TOUCH_OFFSET_Y
+                    : ghostPiece.offsetHeight / 2;
+                
                 ghostPiece.style.left = (clientX - ghostPiece.offsetWidth / 2) + 'px';
                 ghostPiece.style.top = (clientY - offsetY) + 'px';
             }
@@ -348,21 +315,17 @@ class BlockBlastGame {
         
         const onStart = (e) => {
             if (piece.used) return;
-            
-            // Предотвращаем скролл на мобильных
             e.preventDefault();
             
             isDragging = true;
             this.isDragging = true;
             wrapper.classList.add('dragging');
             document.body.classList.add('dragging');
-            
             createGhostPiece(e);
         };
         
         const onMove = (e) => {
             if (!isDragging) return;
-            
             e.preventDefault();
             
             updateGhostPosition(e);
@@ -370,17 +333,18 @@ class BlockBlastGame {
             const clientX = e.clientX || (e.touches && e.touches[0].clientX);
             const clientY = e.clientY || (e.touches && e.touches[0].clientY);
             
-            // Временно скрываем призрак для корректного определения элемента
-            if (ghostPiece) {
-                ghostPiece.style.display = 'none';
-            }
+            // На тач смещаем точку поиска клетки вверх —
+            // совпадает с ghost и подсветкой на поле
+            const isTouchEvent = !!(e.touches || e.changedTouches);
+            const lookupY = isTouchEvent ? clientY - TOUCH_OFFSET_Y : clientY;
             
-            const elements = document.elementsFromPoint(clientX, clientY);
+            // Временно скрываем призрак для корректного определения элемента
+            if (ghostPiece) ghostPiece.style.display = 'none';
+            
+            const elements = document.elementsFromPoint(clientX, lookupY);
             const cell = elements.find(el => el.classList.contains('cell'));
             
-            if (ghostPiece) {
-                ghostPiece.style.display = 'block';
-            }
+            if (ghostPiece) ghostPiece.style.display = 'block';
             
             if (cell) {
                 const row = parseInt(cell.dataset.row);
@@ -413,7 +377,11 @@ class BlockBlastGame {
             const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
             const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
             
-            const elements = document.elementsFromPoint(clientX, clientY);
+            // Смещаем точку размещения вверх так же, как ghost и подсветка
+            const isTouchEnd = !!(e.changedTouches && !e.clientX);
+            const lookupY = isTouchEnd ? clientY - TOUCH_OFFSET_Y : clientY;
+            
+            const elements = document.elementsFromPoint(clientX, lookupY);
             const cell = elements.find(el => el.classList.contains('cell'));
             
             if (cell) {
@@ -453,10 +421,8 @@ class BlockBlastGame {
     }
     
     setupEventListeners() {
-        // Кнопки модального окна
         document.getElementById('restartBtn').addEventListener('click', () => this.restart());
         document.getElementById('rewardBtn').addEventListener('click', () => this.sendReward());
-        // При клике на backdrop перезапускаем игру (не просто скрываем)
         document.getElementById('modalBackdrop').addEventListener('click', () => this.restart());
     }
     
@@ -499,13 +465,11 @@ class BlockBlastGame {
                     const targetRow = startRow + i;
                     const targetCol = startCol + j;
                     
-                    // Проверка границ
                     if (targetRow < 0 || targetRow >= BOARD_SIZE || 
                         targetCol < 0 || targetCol >= BOARD_SIZE) {
                         return false;
                     }
                     
-                    // Проверка занятости
                     if (this.board[targetRow][targetCol] !== 0) {
                         return false;
                     }
@@ -522,7 +486,6 @@ class BlockBlastGame {
             return;
         }
         
-        // Размещаем фигуру на доске
         piece.shape.forEach((row, i) => {
             row.forEach((cell, j) => {
                 if (cell) {
@@ -533,21 +496,17 @@ class BlockBlastGame {
             });
         });
         
-        // Начисляем +10 очков за размещение фигуры
         this.score += 10;
         this.updateScore();
         
-        // Помечаем фигуру как использованную
         piece.used = true;
         const wrapper = document.querySelector(`[data-piece-id="${pieceIndex}"]`);
         wrapper.classList.add('used');
         
         this.piecesPlaced++;
         
-        // Обновляем визуально доску
         this.renderBoard();
         
-        // Проверяем и очищаем линии
         setTimeout(() => {
             const linesCleared = this.checkAndClearLines();
             
@@ -563,14 +522,12 @@ class BlockBlastGame {
                 this.currentCombo = 0;
             }
             
-            // Проверяем, все ли фигуры использованы
             if (this.pieces.every(p => p.used)) {
                 this.generateNewPieces();
             }
             
             this.updateStats();
             
-            // Проверяем game over ПОСЛЕ анимации очистки (600мс)
             setTimeout(() => {
                 if (!this.hasValidMoves()) {
                     this.gameOver();
@@ -600,14 +557,12 @@ class BlockBlastGame {
         const rowsToClear = [];
         const colsToClear = [];
         
-        // Проверяем ряды
         for (let row = 0; row < BOARD_SIZE; row++) {
             if (this.board[row].every(cell => cell !== 0)) {
                 rowsToClear.push(row);
             }
         }
         
-        // Проверяем колонки
         for (let col = 0; col < BOARD_SIZE; col++) {
             let filled = true;
             for (let row = 0; row < BOARD_SIZE; row++) {
@@ -616,30 +571,24 @@ class BlockBlastGame {
                     break;
                 }
             }
-            if (filled) {
-                colsToClear.push(col);
-            }
+            if (filled) colsToClear.push(col);
         }
         
         const totalLines = rowsToClear.length + colsToClear.length;
         
         if (totalLines > 0) {
-            // Анимация очистки
             rowsToClear.forEach(row => {
                 for (let col = 0; col < BOARD_SIZE; col++) {
-                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    cell.classList.add('clearing');
+                    document.querySelector(`[data-row="${row}"][data-col="${col}"]`).classList.add('clearing');
                 }
             });
             
             colsToClear.forEach(col => {
                 for (let row = 0; row < BOARD_SIZE; row++) {
-                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    cell.classList.add('clearing');
+                    document.querySelector(`[data-row="${row}"][data-col="${col}"]`).classList.add('clearing');
                 }
             });
             
-            // Удаление заполненных линий после анимации
             setTimeout(() => {
                 rowsToClear.forEach(row => {
                     for (let col = 0; col < BOARD_SIZE; col++) {
@@ -655,16 +604,10 @@ class BlockBlastGame {
                 
                 this.renderBoard();
                 
-                // Начисляем очки
-                // +30 очков за каждую линию
                 const linePoints = totalLines * 30;
-                
-                // +75 очков за каждое комбо (начиная со второго)
                 const comboBonus = this.currentCombo > 1 ? (this.currentCombo - 1) * 75 : 0;
                 
-                const points = linePoints + comboBonus;
-                
-                this.score += points;
+                this.score += linePoints + comboBonus;
                 this.clearedLines += totalLines;
                 this.updateScore();
                 
@@ -687,19 +630,14 @@ class BlockBlastGame {
     }
     
     hasValidMoves() {
-        // Проверяем, можно ли разместить хотя бы одну из оставшихся фигур
         const availablePieces = this.pieces.filter(p => !p.used);
         
-        if (availablePieces.length === 0) {
-            return true; // Все фигуры использованы, новые будут сгенерированы
-        }
+        if (availablePieces.length === 0) return true;
         
         for (const piece of availablePieces) {
             for (let row = 0; row < BOARD_SIZE; row++) {
                 for (let col = 0; col < BOARD_SIZE; col++) {
-                    if (this.canPlacePiece(row, col, piece)) {
-                        return true;
-                    }
+                    if (this.canPlacePiece(row, col, piece)) return true;
                 }
             }
         }
@@ -719,7 +657,6 @@ class BlockBlastGame {
     }
     
     gameOver() {
-        // Проверяем рекорд
         const isNewHighScore = this.score > this.highScore;
         if (isNewHighScore) {
             this.highScore = this.score;
@@ -752,7 +689,6 @@ class BlockBlastGame {
         this.updateStats();
     }
     
-    // Добавляем метод lightenColor, который используется в createPieceElement
     lightenColor(color, percent) {
         const num = parseInt(color.replace("#",""), 16);
         const amt = Math.round(2.55 * percent);
@@ -762,7 +698,6 @@ class BlockBlastGame {
         return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 + (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255)).toString(16).slice(1);
     }
     
-    // Методы для работы с рекордами
     loadHighScore() {
         const saved = localStorage.getItem('blockBlastHighScore');
         return saved ? parseInt(saved) : 0;
@@ -772,25 +707,21 @@ class BlockBlastGame {
         localStorage.setItem('blockBlastHighScore', this.highScore.toString());
     }
     
-    // Шифрование для бота
     encryptScore(score) {
-        // Используем короткие ключи для уменьшения размера
         const data = {
-            s: score,                    // score
-            l: this.clearedLines,        // lines
-            c: this.maxCombo,            // combo
-            p: this.piecesPlaced,        // pieces
-            t: Date.now(),               // timestamp
-            h: this.generateChecksum(score) // hash/checksum
+            s: score,
+            l: this.clearedLines,
+            c: this.maxCombo,
+            p: this.piecesPlaced,
+            t: Date.now(),
+            h: this.generateChecksum(score)
         };
         
         const jsonString = JSON.stringify(data);
         let encrypted = '';
         
-        // XOR шифрование
         for (let i = 0; i < jsonString.length; i++) {
             const charCode = jsonString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length);
-            // Конвертируем в hex (2 символа на байт)
             encrypted += charCode.toString(16).padStart(2, '0');
         }
         
@@ -811,7 +742,6 @@ class BlockBlastGame {
         const urlParams = new URLSearchParams(window.location.search);
         const botUsername = urlParams.get('bot') || 'FernieXZBTBot';
         
-        // Формируем данные в формате: BB_score_lines_combo_pieces
         const startParam = `BB_${this.score}_${this.clearedLines}_${this.maxCombo}_${this.piecesPlaced}`;
         
         console.log('=== SENDING REWARD ===');
@@ -819,37 +749,25 @@ class BlockBlastGame {
         console.log('Start param:', startParam);
         console.log('Param length:', startParam.length);
         
-        // Проверяем длину (должна быть < 64)
         if (startParam.length > 64) {
             console.error('ERROR: Parameter too long!', startParam.length);
             alert('⚠️ Слишком высокий счёт для отправки.\nСыграйте с меньшим результатом.');
             return;
         }
         
-        // Формируем ссылку на бота
         const botUrl = `https://t.me/${botUsername}?start=${startParam}`;
         
         console.log('Bot URL:', botUrl);
-        console.log('Opening bot...');
         
-        // Открываем бота
         const opened = window.open(botUrl, '_blank');
-        
-        if (!opened) {
-            console.warn('Popup blocked, trying location.href');
-            window.location.href = botUrl;
-        }
+        if (!opened) window.location.href = botUrl;
         
         console.log('=== REWARD SENT ===');
         
-        // Анимация закрытия модального окна и перезапуск игры
         const modal = document.getElementById('gameOverModal');
         const modalContent = modal.querySelector('.modal-content');
-        
-        // Добавляем класс для анимации выхода
         modalContent.style.animation = 'modalSlideOut 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
         
-        // Через 400мс скрываем модальное окно и перезапускаем игру
         setTimeout(() => {
             this.restart();
         }, 400);
