@@ -327,8 +327,15 @@ class BlockBlastGame {
             const clientY = e.clientY || (e.touches && e.touches[0].clientY);
             
             if (clientX !== undefined && clientY !== undefined) {
+                const isTouchEvent = !!(e.touches || e.changedTouches);
+                // На тач-устройствах поднимаем фигуру выше пальца,
+                // чтобы она была видна и не перекрывалась пальцем
+                const offsetY = isTouchEvent
+                    ? ghostPiece.offsetHeight + 20  // полностью выше пальца + отступ
+                    : ghostPiece.offsetHeight / 2;  // обычное центрирование для мыши
+
                 ghostPiece.style.left = (clientX - ghostPiece.offsetWidth / 2) + 'px';
-                ghostPiece.style.top = (clientY - ghostPiece.offsetHeight / 2) + 'px';
+                ghostPiece.style.top = (clientY - offsetY) + 'px';
             }
         };
         
